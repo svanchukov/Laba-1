@@ -1,9 +1,11 @@
 package org.example;
 
+import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.util.*;
 
 public class Knapsack {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         String[] texts = {
                 "ВАНЧУКОВ АЛЕКСАНДР ВЯЧЕСЛАВОВИЧ",
                 "НЕ ПЛАЧЬ ДЕВЧОНКА ПРОЙДУТ ДОЖДИ СОЛДАТ ВЕРНЕТСЯ ТЫ ТОЛЬКО ЖДИ",
@@ -11,65 +13,73 @@ public class Knapsack {
                 "ЭЛЬ ГАМАЛЬ УСОВЕРШЕНСТВОВАЛ СИСТЕМУ ДИФФИ ХЕЛЛМАНА И ПОЛУЧИЛ ДВА АЛГОРИТМА"
         };
 
-        // Простая супервозрастающая последовательность
-        int[] w = {2, 3, 7, 14, 30, 57, 120, 251};
-        int q = 491;
-        int r = 41;
+        // 1. Приватный ключ (супервозрастающая последовательность)
+        int[] a = {2, 3, 7, 14, 30, 57, 120, 251}; // каждый > суммы предыдущих
 
-        // Публичный ключ
-        int[] b = new int[w.length];
-        for (int i = 0; i < w.length; i++) {
-            b[i] = (w[i] * r) % q;
+        // 2. Выбираем m и n
+        int m = 491; // > суммы a[]
+        int n = 41;  // взаимно простое с m
+        int nInverse = BigInteger.valueOf(n).modInverse(BigInteger.valueOf(m)).intValue();
+
+        // === 3. Публичный ключ ===
+        int[] b = new int[a.length];
+        for (int i = 0; i < a.length; i++) {
+            b[i] = (a[i] * n) % m;
         }
 
-        System.out.println("Knapsack Encryption:");
-        System.out.println("Public key: " + Arrays.toString(b));
-        System.out.println();
+        System.out.println("Приватный ключ a: " + Arrays.toString(a));
+        System.out.println("Модуль m = " + m + ", множитель n = " + n);
+        System.out.println("Открытый ключ b: " + Arrays.toString(b));
+        System.out.println("Обратное n⁻¹ mod m = " + nInverse);
+        System.out.println("=====================================================\n");
 
+        Charset charset = Charset.forName("Windows-1251");
+
+        // Таблица шифрования
         for (String text : texts) {
             System.out.println("Исходное сообщение: " + text);
 
-            // Преобразуем символы в бинарный код Windows-1251 (упрощенно)
-            byte[] bytes = text.replaceAll("[^А-ЯЁ]", "").getBytes();
+            // переводим текст в байты Windows-1251
+            byte[] bytes = text.getBytes(charset);
 
             // Шифрование
-            List<Integer> encrypted = new ArrayList<>();
-            for (byte ch : bytes) {
-                String bits = String.format("%8s", Integer.toBinaryString(ch & 0xFF)).replace(' ', '0');
+            List<Integer> cipherList = new ArrayList<>();
+            for (byte bChar : bytes) {
+                String bits = String.format("%8s", Integer.toBinaryString(bChar & 0xFF)).replace(' ', '0');
                 int sum = 0;
                 for (int i = 0; i < 8; i++) {
                     if (bits.charAt(i) == '1') sum += b[i];
                 }
-                encrypted.add(sum);
+                cipherList.add(sum);
             }
 
-            System.out.println("Зашифрованное: " + encrypted);
+            System.out.println("Зашифрованное: " + cipherList);
 
             // Расшифрование
-            List<Character> decrypted = new ArrayList<>();
-            int r_inv = modInverse(r, q);
-            for (int c : encrypted) {
-                int cPrime = (c * r_inv) % q;
+            List<Byte> decryptedBytes = new ArrayList<>();
+            for (int S : cipherList) {
+                int S1 = (S * nInverse) % m;
 
-                // Распаковываем с конца
                 StringBuilder bits = new StringBuilder();
-                for (int i = w.length - 1; i >= 0; i--) {
-                    if (w[i] <= cPrime) {
-                        cPrime -= w[i];
+                for (int i = a.length - 1; i >= 0; i--) {
+                    if (a[i] <= S1) {
                         bits.insert(0, "1");
-                    } else bits.insert(0, "0");
+                        S1 -= a[i];
+                    } else {
+                        bits.insert(0, "0");
+                    }
                 }
 
-                decrypted.add((char) Integer.parseInt(bits.toString(), 2));
+                int symbolCode = Integer.parseInt(bits.toString(), 2);
+                decryptedBytes.add((byte) symbolCode);
             }
 
-            System.out.println("Расшифрованное: " + decrypted.toString());
-            System.out.println();
-        }
-    }
+            byte[] decryptedArray = new byte[decryptedBytes.size()];
+            for (int i = 0; i < decryptedBytes.size(); i++) decryptedArray[i] = decryptedBytes.get(i);
 
-    private static int modInverse(int a, int m) {
-        for (int x = 1; x < m; x++) if ((a * x) % m == 1) return x;
-        return 1;
+            String decryptedText = new String(decryptedArray, charset);
+            System.out.println("Расшифрованное сообщение: " + decryptedText);
+            System.out.println("-----------------------------------------------------\n");
+        }
     }
 }
