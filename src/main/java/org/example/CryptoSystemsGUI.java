@@ -6,8 +6,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.math.BigInteger;
 import java.security.SecureRandom;
-import java.util.*;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Random;
 
 public class CryptoSystemsGUI extends JFrame {
     private JComboBox<String> algorithmCombo;
@@ -39,9 +39,9 @@ public class CryptoSystemsGUI extends JFrame {
     };
 
     public CryptoSystemsGUI() {
-        setTitle("Криптосистемы с открытым ключом");
+        setTitle("Криптосистемы с открытым ключом — исправлено");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 800);
+        setSize(1250, 820);
         setLocationRelativeTo(null);
 
         initComponents();
@@ -91,33 +91,43 @@ public class CryptoSystemsGUI extends JFrame {
         centerPanel.setBorder(new EmptyBorder(0, 10, 10, 10));
         centerPanel.setBackground(new Color(40, 40, 70));
 
-        // Левая панель - параметры
+        // Левая панель - параметры и ключи
         JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
         leftPanel.setBackground(new Color(40, 40, 70));
 
-        // Панель параметров
         parametersPanel = new JPanel(new BorderLayout());
         parametersPanel.setBorder(createTitledBorder("Параметры"));
         parametersPanel.setBackground(new Color(50, 50, 90));
         updateParametersPanel();
         leftPanel.add(parametersPanel, BorderLayout.CENTER);
 
-        // Кнопка генерации ключей
+        // Кнопки генерации
+        JPanel genButtons = new JPanel(new GridLayout(1, 2, 10, 10));
+        genButtons.setBorder(new EmptyBorder(8, 8, 8, 8));
+        genButtons.setBackground(new Color(40, 40, 70));
+
         JButton generateButton = new JButton("Сгенерировать ключи");
         styleButton(generateButton, new Color(120, 80, 200));
         generateButton.addActionListener(e -> generateKeys());
-        leftPanel.add(generateButton, BorderLayout.SOUTH);
+        genButtons.add(generateButton);
+
+        JButton autoRSAButton = new JButton("Auto RSA (1024)");
+        styleButton(autoRSAButton, new Color(200, 100, 80));
+        autoRSAButton.addActionListener(e -> autoGenerateRSA());
+        genButtons.add(autoRSAButton);
+
+        leftPanel.add(genButtons, BorderLayout.SOUTH);
 
         // Панель ключей
         JPanel keysPanel = new JPanel(new BorderLayout());
         keysPanel.setBorder(createTitledBorder("Сгенерированные ключи"));
         keysPanel.setBackground(new Color(50, 50, 90));
-        keysArea = new JTextArea(5, 30);
+        keysArea = new JTextArea(7, 32);
         styleTextArea(keysArea);
         keysArea.setEditable(false);
         keysPanel.add(new JScrollPane(keysArea), BorderLayout.CENTER);
 
-        JPanel leftContainer = new JPanel(new GridLayout(2, 1, 5, 5));
+        JPanel leftContainer = new JPanel(new GridLayout(2, 1, 8, 8));
         leftContainer.setBackground(new Color(40, 40, 70));
         leftContainer.add(leftPanel);
         leftContainer.add(keysPanel);
@@ -179,60 +189,73 @@ public class CryptoSystemsGUI extends JFrame {
 
         if ("RSA".equals(algo)) {
             gbc.gridx = 0; gbc.gridy = 0;
-            params.add(createLabel("Простое число P:"), gbc);
+            params.add(createLabel("Простое число P (вручную, или Auto RSA):"), gbc);
             gbc.gridx = 1;
-            rsaPField = createTextField("61");
+            rsaPField = createTextField("");
             params.add(rsaPField, gbc);
 
             gbc.gridx = 0; gbc.gridy = 1;
             params.add(createLabel("Простое число Q:"), gbc);
             gbc.gridx = 1;
-            rsaQField = createTextField("53");
+            rsaQField = createTextField("");
             params.add(rsaQField, gbc);
 
             gbc.gridx = 0; gbc.gridy = 2;
-            params.add(createLabel("Экспонента E:"), gbc);
+            params.add(createLabel("Экспонента E (обычно 65537):"), gbc);
             gbc.gridx = 1;
-            rsaEField = createTextField("17");
+            rsaEField = createTextField("65537");
             params.add(rsaEField, gbc);
+
+            gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
+            JLabel note = createLabel("<html><i>Важно: n = p*q должен быть больше 65535 (для Unicode). Если p/q маленькие, нажмите <b>Auto RSA (1024)</b>.</i></html>");
+            note.setFont(new Font("Arial", Font.ITALIC, 11));
+            params.add(note, gbc);
+            gbc.gridwidth = 1;
 
         } else if ("Укладка ранца".equals(algo)) {
             gbc.gridx = 0; gbc.gridy = 0;
-            params.add(createLabel("Последовательность:"), gbc);
+            params.add(createLabel("Последовательность (16 чисел, через запятую):"), gbc);
             gbc.gridx = 1;
-            knapsackSeqField = createTextField("2,3,7,14,30,57,120,251");
+            // По умолчанию даём супер-возрастающую последовательность длины 16
+            knapsackSeqField = createTextField("1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768");
             params.add(knapsackSeqField, gbc);
 
             gbc.gridx = 0; gbc.gridy = 1;
-            params.add(createLabel("Модуль M:"), gbc);
+            params.add(createLabel("Модуль M (> сумма последовательности):"), gbc);
             gbc.gridx = 1;
-            knapsackMField = createTextField("41");
+            knapsackMField = createTextField("131072"); // > сумма
             params.add(knapsackMField, gbc);
 
             gbc.gridx = 0; gbc.gridy = 2;
-            params.add(createLabel("Множитель W:"), gbc);
+            params.add(createLabel("Множитель W (взаимно прост с M):"), gbc);
             gbc.gridx = 1;
-            knapsackWField = createTextField("491");
+            knapsackWField = createTextField("65537");
             params.add(knapsackWField, gbc);
 
         } else if ("Эль-Гамаль".equals(algo)) {
             gbc.gridx = 0; gbc.gridy = 0;
-            params.add(createLabel("Простое число P:"), gbc);
+            params.add(createLabel("Простое число P (должно быть >65535):"), gbc);
             gbc.gridx = 1;
-            elgamalPField = createTextField("467");
+            elgamalPField = createTextField("65537");
             params.add(elgamalPField, gbc);
 
             gbc.gridx = 0; gbc.gridy = 1;
             params.add(createLabel("Образующий G:"), gbc);
             gbc.gridx = 1;
-            elgamalGField = createTextField("2");
+            elgamalGField = createTextField("3");
             params.add(elgamalGField, gbc);
 
             gbc.gridx = 0; gbc.gridy = 2;
-            params.add(createLabel("Секретный ключ X:"), gbc);
+            params.add(createLabel("Секретный ключ X (1..p-1):"), gbc);
             gbc.gridx = 1;
             elgamalXField = createTextField("153");
             params.add(elgamalXField, gbc);
+
+            gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
+            JLabel noteE = createLabel("<html><i>Если P маленькое (<65535), будет сгенерировано большое P автоматически при генерации ключей.</i></html>");
+            noteE.setFont(new Font("Arial", Font.ITALIC, 11));
+            params.add(noteE, gbc);
+            gbc.gridwidth = 1;
         }
 
         parametersPanel.add(params, BorderLayout.CENTER);
@@ -245,15 +268,40 @@ public class CryptoSystemsGUI extends JFrame {
             String algo = (String) algorithmCombo.getSelectedItem();
 
             if ("RSA".equals(algo)) {
-                long p = Long.parseLong(rsaPField.getText());
-                long q = Long.parseLong(rsaQField.getText());
-                long e = Long.parseLong(rsaEField.getText());
+                String ptxt = rsaPField.getText().trim();
+                String qtxt = rsaQField.getText().trim();
+                String etxt = rsaEField.getText().trim();
 
-                if (!isPrime(p) || !isPrime(q)) {
+                if (ptxt.isEmpty() || qtxt.isEmpty()) {
+                    // Если не введены p/q — автоматически генерируем безопасные
+                    autoGenerateRSA();
+                    return;
+                }
+
+                BigInteger p = new BigInteger(ptxt);
+                BigInteger q = new BigInteger(qtxt);
+                BigInteger e = new BigInteger(etxt.isEmpty() ? "65537" : etxt);
+
+                if (!isProbablePrime(p) || !isProbablePrime(q)) {
                     throw new Exception("P и Q должны быть простыми числами!");
                 }
 
-                rsaKeys = new RSAKeys(p, q, e);
+                RSAKeys keys = new RSAKeys(p, q, e);
+                // Проверяем, что n > 65535 (нужно для корректного восстановления UTF-16 char)
+                if (keys.n.compareTo(BigInteger.valueOf(65535)) <= 0) {
+                    // автогенерируем большие
+                    int opt = JOptionPane.showConfirmDialog(this,
+                            "p*q слишком мало для Unicode. Сгенерировать безопасные RSA-ключи (1024 бит)?",
+                            "Малый модуль", JOptionPane.YES_NO_OPTION);
+                    if (opt == JOptionPane.YES_OPTION) {
+                        autoGenerateRSA();
+                        return;
+                    } else {
+                        throw new Exception("n слишком мало для корректной работы с Unicode. Нажмите Auto RSA (1024).");
+                    }
+                }
+
+                rsaKeys = keys;
                 keysArea.setText(rsaKeys.toString());
 
             } else if ("Укладка ранца".equals(algo)) {
@@ -262,18 +310,28 @@ public class CryptoSystemsGUI extends JFrame {
                 for (int i = 0; i < parts.length; i++) {
                     seq[i] = Integer.parseInt(parts[i].trim());
                 }
-                int m = Integer.parseInt(knapsackMField.getText());
-                int w = Integer.parseInt(knapsackWField.getText());
+                int m = Integer.parseInt(knapsackMField.getText().trim());
+                int w = Integer.parseInt(knapsackWField.getText().trim());
 
                 knapsackKeys = new KnapsackKeys(seq, m, w);
                 keysArea.setText(knapsackKeys.toString());
 
             } else if ("Эль-Гамаль".equals(algo)) {
-                long p = Long.parseLong(elgamalPField.getText());
-                long g = Long.parseLong(elgamalGField.getText());
-                long x = Long.parseLong(elgamalXField.getText());
+                String ptxt = elgamalPField.getText().trim();
+                BigInteger p;
+                BigInteger g = new BigInteger(elgamalGField.getText().trim());
+                BigInteger x = new BigInteger(elgamalXField.getText().trim());
 
-                if (!isPrime(p)) {
+                if (ptxt.isEmpty() || new BigInteger(ptxt).compareTo(BigInteger.valueOf(65535)) <= 0) {
+                    // генерируем большое p
+                    SecureRandom rnd = new SecureRandom();
+                    p = BigInteger.probablePrime(512, rnd);
+                    JOptionPane.showMessageDialog(this, "Сгенерировано большое простое p для ElGamal (512 бит).");
+                } else {
+                    p = new BigInteger(ptxt);
+                }
+
+                if (!isProbablePrime(p)) {
                     throw new Exception("P должно быть простым числом!");
                 }
 
@@ -286,6 +344,25 @@ public class CryptoSystemsGUI extends JFrame {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Ошибка: " + ex.getMessage(),
                     "Ошибка", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void autoGenerateRSA() {
+        try {
+            SecureRandom rnd = new SecureRandom();
+            // 1024-bit RSA (p и q ~512 бит)
+            BigInteger p = BigInteger.probablePrime(512, rnd);
+            BigInteger q = BigInteger.probablePrime(512, rnd);
+            BigInteger e = BigInteger.valueOf(65537);
+
+            rsaKeys = new RSAKeys(p, q, e);
+            rsaPField.setText(p.toString());
+            rsaQField.setText(q.toString());
+            rsaEField.setText(e.toString());
+            keysArea.setText(rsaKeys.toString());
+            JOptionPane.showMessageDialog(this, "Автоматически сгенерированы RSA-ключи (1024 бита).");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Ошибка генерации RSA: " + ex.getMessage(), "Ошибка", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -302,7 +379,11 @@ public class CryptoSystemsGUI extends JFrame {
 
             if ("RSA".equals(algo)) {
                 if (rsaKeys == null) throw new Exception("Сначала сгенерируйте ключи!");
-                result = encrypt ? rsaKeys.encrypt(input) : rsaKeys.decrypt(input);
+                if (encrypt) {
+                    result = rsaKeys.encrypt(input);
+                } else {
+                    result = rsaKeys.decrypt(input);
+                }
 
             } else if ("Укладка ранца".equals(algo)) {
                 if (knapsackKeys == null) throw new Exception("Сначала сгенерируйте ключи!");
@@ -321,7 +402,7 @@ public class CryptoSystemsGUI extends JFrame {
         }
     }
 
-    // Вспомогательные методы UI
+    // UI helpers
     private JPanel createStyledPanel(String title) {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBorder(createTitledBorder(title));
@@ -373,7 +454,7 @@ public class CryptoSystemsGUI extends JFrame {
     }
 
     private JTextField createTextField(String defaultValue) {
-        JTextField field = new JTextField(defaultValue, 15);
+        JTextField field = new JTextField(defaultValue, 25);
         field.setBackground(new Color(70, 70, 110));
         field.setForeground(Color.WHITE);
         field.setCaretColor(Color.WHITE);
@@ -381,97 +462,85 @@ public class CryptoSystemsGUI extends JFrame {
         return field;
     }
 
-    // Математические функции
-    private static boolean isPrime(long n) {
-        if (n < 2) return false;
-        if (n == 2) return true;
-        if (n % 2 == 0) return false;
-        for (long i = 3; i * i <= n; i += 2) {
-            if (n % i == 0) return false;
-        }
-        return true;
+    // ---- Utilities ----
+    private static boolean isProbablePrime(BigInteger n) {
+        return n.isProbablePrime(25);
     }
 
-    private static long gcd(long a, long b) {
-        while (b != 0) {
-            long temp = b;
-            b = a % b;
-            a = temp;
-        }
-        return a;
+    private static BigInteger modPow(BigInteger base, BigInteger exp, BigInteger mod) {
+        return base.modPow(exp, mod);
     }
 
-    private static long modInverse(long a, long m) {
-        a = ((a % m) + m) % m;
-        for (long x = 1; x < m; x++) {
-            if ((a * x) % m == 1) return x;
+    private static BigInteger modInverse(BigInteger a, BigInteger m) throws Exception {
+        try {
+            return a.modInverse(m);
+        } catch (ArithmeticException ex) {
+            throw new Exception("Обратный элемент не существует (a и m должны быть взаимно простыми).");
         }
-        return 1;
     }
 
-    private static long modPow(long base, long exp, long mod) {
-        long result = 1;
-        base = base % mod;
-        while (exp > 0) {
-            if (exp % 2 == 1) result = (result * base) % mod;
-            exp = exp >> 1;
-            base = (base * base) % mod;
-        }
-        return result;
-    }
-
-    // Классы для хранения ключей
+    // ---- RSA class (BigInteger) ----
     static class RSAKeys {
-        long p, q, n, phi, e, d;
+        BigInteger p, q, n, phi, e, d;
 
-        RSAKeys(long p, long q, long e) throws Exception {
+        RSAKeys(BigInteger p, BigInteger q, BigInteger e) throws Exception {
             this.p = p;
             this.q = q;
-            this.n = p * q;
-            this.phi = (p - 1) * (q - 1);
+            this.n = p.multiply(q);
+            this.phi = (p.subtract(BigInteger.ONE)).multiply(q.subtract(BigInteger.ONE));
             this.e = e;
 
-            if (gcd(e, phi) != 1) {
+            if (!this.e.gcd(phi).equals(BigInteger.ONE)) {
                 throw new Exception("E и φ(n) должны быть взаимно простыми!");
             }
 
-            this.d = modInverse(e, phi);
+            this.d = this.e.modInverse(phi);
         }
 
+        // encrypt: возвращает строку с числами, разделёнными запятыми (BigInteger)
         String encrypt(String text) {
             StringBuilder result = new StringBuilder();
             for (int i = 0; i < text.length(); i++) {
-                long m = text.charAt(i);
-                long c = modPow(m, e, n);
-                result.append(c);
+                int code = text.charAt(i);
+                BigInteger m = BigInteger.valueOf(code);
+                BigInteger c = modPow(m, e, n);
+                result.append(c.toString());
                 if (i < text.length() - 1) result.append(",");
             }
             return result.toString();
         }
 
-        String decrypt(String text) {
+        // decrypt: получает ту же строку, возвращает исходный текст
+        String decrypt(String text) throws Exception {
             StringBuilder result = new StringBuilder();
             String[] parts = text.split(",");
             for (String part : parts) {
-                long c = Long.parseLong(part.trim());
-                long m = modPow(c, d, n);
-                result.append((char) m);
+                part = part.trim();
+                if (part.isEmpty()) continue;
+                BigInteger c = new BigInteger(part);
+                BigInteger m = modPow(c, d, n);
+                int charCode = m.intValue();
+                result.append((char) charCode);
             }
             return result.toString();
         }
 
         public String toString() {
-            return String.format("Открытый ключ: (e=%d, n=%d)\nЗакрытый ключ: (d=%d, n=%d)\nφ(n)=%d",
-                    e, n, d, n, phi);
+            return String.format("RSA:\nОткрытый ключ (e,n):\n e=%s\n n=%s\n\nЗакрытый ключ (d,n):\n d=%s\n n=%s\n\nφ(n)=%s",
+                    e.toString(), n.toString(), d.toString(), n.toString(), phi.toString());
         }
     }
 
+    // ---- Knapsack (16-bit) ----
     static class KnapsackKeys {
         int[] privateSeq, publicSeq;
         int m, w, wInv;
 
         KnapsackKeys(int[] seq, int m, int w) throws Exception {
-            this.privateSeq = seq;
+            if (seq.length != 16) {
+                throw new Exception("Для корректной поддержки Unicode последовательность должна содержать ровно 16 элементов!");
+            }
+            this.privateSeq = Arrays.copyOf(seq, seq.length);
             this.m = m;
             this.w = w;
 
@@ -485,29 +554,35 @@ public class CryptoSystemsGUI extends JFrame {
             }
 
             if (m <= sum) {
-                throw new Exception("M должен быть больше суммы!");
+                throw new Exception("M должен быть больше суммы всех элементов последовательности! Сумма = " + sum + ", M = " + m);
             }
 
-            if (gcd(w, m) != 1) {
+            if (BigInteger.valueOf(w).gcd(BigInteger.valueOf(m)).intValue() != 1) {
                 throw new Exception("W и M должны быть взаимно простыми!");
             }
 
             this.publicSeq = new int[seq.length];
             for (int i = 0; i < seq.length; i++) {
-                publicSeq[i] = (int) ((seq[i] * w) % m);
+                this.publicSeq[i] = (int) (((long) seq[i] * (long) w) % m);
             }
 
-            this.wInv = (int) modInverse(w, m);
+            this.wInv = modInverseInt(w, m);
         }
 
+        private int modInverseInt(int a, int mod) throws Exception {
+            BigInteger inv = modInverse(BigInteger.valueOf(a), BigInteger.valueOf(mod));
+            return inv.intValue();
+        }
+
+        // encrypt: каждому символу (char, 0..65535) соответствует сумма publicSeq по 16 битам
         String encrypt(String text) {
             StringBuilder result = new StringBuilder();
             for (int i = 0; i < text.length(); i++) {
-                int charCode = text.charAt(i);
-                String binary = String.format("%8s", Integer.toBinaryString(charCode)).replace(' ', '0');
+                int charCode = text.charAt(i); // 0..65535
+                String binary = String.format("%16s", Integer.toBinaryString(charCode & 0xFFFF)).replace(' ', '0');
 
-                int sum = 0;
-                for (int j = 0; j < 8 && j < publicSeq.length; j++) {
+                long sum = 0;
+                for (int j = 0; j < 16; j++) {
                     if (binary.charAt(j) == '1') {
                         sum += publicSeq[j];
                     }
@@ -523,90 +598,103 @@ public class CryptoSystemsGUI extends JFrame {
             String[] parts = text.split(",");
 
             for (String part : parts) {
-                int encValue = Integer.parseInt(part.trim());
-                int c = (int) ((encValue * wInv) % m);
+                part = part.trim();
+                if (part.isEmpty()) continue;
+                int encValue = Integer.parseInt(part);
 
-                StringBuilder binary = new StringBuilder();
+                // S = C * wInv mod m
+                int s = (int) (((long) encValue * (long) wInv) % m);
+                if (s < 0) s += m;
+
+                char[] bits = new char[16];
+                int temp = s;
                 for (int i = privateSeq.length - 1; i >= 0; i--) {
-                    if (c >= privateSeq[i]) {
-                        binary.insert(0, '1');
-                        c -= privateSeq[i];
+                    if (temp >= privateSeq[i]) {
+                        bits[i] = '1';
+                        temp -= privateSeq[i];
                     } else {
-                        binary.insert(0, '0');
+                        bits[i] = '0';
                     }
                 }
 
-                String bin = binary.toString();
-                if (bin.length() < 8) {
-                    bin = String.format("%8s", bin).replace(' ', '0');
-                }
-                bin = bin.substring(0, 8);
-
-                int charCode = Integer.parseInt(bin, 2);
+                String binStr = new String(bits); // 16 бит
+                int charCode = Integer.parseInt(binStr, 2);
                 result.append((char) charCode);
             }
             return result.toString();
         }
 
         public String toString() {
-            return String.format("Открытый ключ: %s\nЗакрытый ключ: %s\nm=%d, w=%d",
-                    Arrays.toString(publicSeq), Arrays.toString(privateSeq), m, w);
+            return String.format("Knapsack:\nОткрытый ключ: %s\nЗакрытый ключ: %s\nm=%d, w=%d, w⁻¹=%d",
+                    Arrays.toString(publicSeq), Arrays.toString(privateSeq), m, w, wInv);
         }
     }
 
+    // ---- ElGamal (BigInteger) ----
     static class ElGamalKeys {
-        long p, g, x, y;
+        BigInteger p, g, x, y;
+        SecureRandom random = new SecureRandom();
 
-        ElGamalKeys(long p, long g, long x) throws Exception {
+        ElGamalKeys(BigInteger p, BigInteger g, BigInteger x) throws Exception {
             this.p = p;
             this.g = g;
             this.x = x;
 
-            if (x >= p) {
-                throw new Exception("X должен быть меньше P!");
+            if (x.compareTo(p) >= 0 || x.compareTo(BigInteger.ZERO) <= 0) {
+                throw new Exception("X должен быть в диапазоне 1..p-1!");
             }
 
             this.y = modPow(g, x, p);
         }
 
+        // encrypt returns string: a:b,a:b,...
         String encrypt(String text) {
             StringBuilder result = new StringBuilder();
-            Random random = new Random();
 
             for (int i = 0; i < text.length(); i++) {
-                long m = text.charAt(i);
-                long k = random.nextInt((int) (p - 2)) + 1;
+                int charCode = text.charAt(i);
+                BigInteger m = BigInteger.valueOf(charCode);
 
-                long a = modPow(g, k, p);
-                long b = (m * modPow(y, k, p)) % p;
+                BigInteger k;
+                do {
+                    k = new BigInteger(p.bitLength(), random);
+                } while (k.compareTo(BigInteger.ONE) < 0 || k.compareTo(p.subtract(BigInteger.TWO)) > 0);
 
-                result.append(a).append(":").append(b);
+                BigInteger a = modPow(g, k, p);
+                BigInteger b = (m.multiply(modPow(y, k, p))).mod(p);
+
+                result.append(a.toString()).append(":").append(b.toString());
                 if (i < text.length() - 1) result.append(",");
             }
             return result.toString();
         }
 
-        String decrypt(String text) {
+        String decrypt(String text) throws Exception {
             StringBuilder result = new StringBuilder();
             String[] parts = text.split(",");
 
             for (String part : parts) {
+                part = part.trim();
+                if (part.isEmpty()) continue;
                 String[] pair = part.split(":");
-                long a = Long.parseLong(pair[0].trim());
-                long b = Long.parseLong(pair[1].trim());
+                if (pair.length != 2) throw new Exception("Неверный формат шифротекста Эль-Гамаль.");
 
-                long s = modPow(a, x, p);
-                long sInv = modInverse(s, p);
-                long m = (b * sInv) % p;
+                BigInteger a = new BigInteger(pair[0].trim());
+                BigInteger b = new BigInteger(pair[1].trim());
 
-                result.append((char) m);
+                BigInteger s = modPow(a, x, p);
+                BigInteger sInv = modInverse(s, p);
+                BigInteger m = (b.multiply(sInv)).mod(p);
+
+                int charCode = m.intValue();
+                result.append((char) charCode);
             }
             return result.toString();
         }
 
         public String toString() {
-            return String.format("Открытый ключ: (p=%d, g=%d, y=%d)\nЗакрытый ключ: (x=%d)",
-                    p, g, y, x);
+            return String.format("ElGamal:\nОткрытый ключ: (p=%s, g=%s, y=%s)\nЗакрытый ключ: (x=%s)",
+                    p.toString(), g.toString(), y.toString(), x.toString());
         }
     }
 
